@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from '../utils/helpers/generateTokenAndSetCookie.js';
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from 'mongoose';
+import Post from '../models/postModel.js';
 
 const getUserProfile = async (req, res) => {
     const { query } = req.params;
@@ -167,6 +168,18 @@ const updateUser = async (req, res) => {
         user.bio = bio || user.bio;
 
         user = await user.save();
+
+        // Find all posts that this user has replied and update username and users profilePic fields
+        await Post.updateMany(
+            {"replies.userId": userId},
+            {
+                $set:{
+                    "replies.$[reply].username":user.username,
+                    "replies.$[reply].userProfilePic": user.profilePic
+                }
+            },
+            {arrayFilters:[{"reply.userId":userId}]}
+        )
 
         // password should be null in response
         user.password = null;
